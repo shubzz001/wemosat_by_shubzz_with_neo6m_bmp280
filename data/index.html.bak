@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Line Chart | WeMoSat - Weather Monitoring Satellite</title>
+  <!-- For offline ESP graphs see this tutorial https://circuits4you.com/2018/03/10/esp8266-jquery-and-ajax-web-server/ -->
+  <!-- <script type="text/javascript" src="./Chart.min.js"></script>-->
+  <script type="text/javascript">
+    function loadScriptWithRetry(url, maxAttempts, onSuccess, onError) {
+      let attempts = 0;
+
+      function load() {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = function () {
+          onSuccess();
+        };
+        script.onerror = function () {
+          attempts++;
+          if (attempts < maxAttempts) {
+            console.error(`Error loading the script (${attempts}/${maxAttempts}). Retrying...`);
+            load(); // Retry loading the script
+          } else {
+            onError();
+          }
+        };
+        document.head.appendChild(script);
+      }
+
+      load(); // Start loading the script
+    }
+
+    // Usage
+    loadScriptWithRetry(
+      './Chart.min.js', // Relative path to the script
+      12, // Max attempts
+      function () {
+        console.log('Script loaded successfully.');
+        // Proceed with your code that depends on the loaded script here
+      },
+      function () {
+        console.error('Failed to load the script after multiple attempts.');
+        // Handle the failure scenario here
+      }
+    );
+
+  </script>
+
+  <!-- Meta tag for viewport settings -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    canvas {
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+
+    /* Data Table Styling */
+    #dataTable {
+      font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    #dataTable td,
+    #dataTable th {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+
+    #dataTable tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    #dataTable tr:hover {
+      background-color: #ddd;
+    }
+
+    #dataTable th {
+      padding-top: 12px;
+      padding-bottom: 12px;
+      text-align: left;
+      background-color: #4CAF50;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="row col-md-12">
+    <div class="col-md-2">
+    </div>
+    <div class="col-md-6" style="text-align:center;">
+
+      <b style="font-size: x-large;">WeMoSat - Weather Monitoring Satellite</b><br>
+      <b style="color:orange">by Indo Science Education Trust, Pune</b><br>
+      Real Time Data Humidity, Temperature Logging with Graphs on ESP8266
+
+    </div>
+    <div class="col-md-2">
+
+    </div>
+  </div>
+  <div class="chart-container" style="position: relative; height:350px; width:100%;">
+    <div><canvas id="Chart" width="400" height="400"></canvas></div>
+  </div>
+  <div>
+    <table id="dataTable">
+      <tr>
+        <th>Time</th>
+        <th>Pressure (kPa)</th>
+        <th>East Temp (&deg;C)</th>
+        <th>West Temp (&deg;C)</th>
+        <th>Humidity (%)</th>
+        <th>Altitude (m)</th>
+        <!-- Add new columns for NEO-6M data -->
+        <th>NEO Altitude (m)</th>
+        <th>Latitude</th>
+        <th>Longitude</th>
+        <th>Speed (km/h)</th>
+      </tr>
+    </table>
+  </div>
+  <br>
+  <br>
+
+  <script type="text/javascript">
+
+    // Graphs visit: https://www.chartjs.org
+    document.addEventListener('DOMContentLoaded', function () {
+      var ADCvalues = [];
+      var Tvalues = [];
+      var TFvalues = [];
+      var Hvalues = [];
+      var Altvalues = [];
+      var NeoAltvalues = [];
+      var LatitudeValues = [];
+      var LongitudeValues = [];
+      var SpeedValues = [];
+      var timeStamp = [];
+
+      function showGraph() {
+        var ctx = document.getElementById("Chart").getContext('2d');
+        if (ctx) {
+          var Chart2 = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: timeStamp, // Bottom Labeling
+              datasets: [{
+                  label: "Pressure",
+                  fill: false, // Try with true
+                  backgroundColor: 'rgba( 243,18, 156 , 1)', // Dot marker color
+                  borderColor: 'rgba( 243, 18, 156 , 1)', // Graph Line Color
+                  data: ADCvalues,
+                },
+                {
+                  label: "East Temp",
+                  fill: false, // Try with true
+                  backgroundColor: 'rgba( 243, 156, 18 , 1)', // Dot marker color
+                  borderColor: 'rgba( 243, 156, 18 , 1)', // Graph Line Color
+                  data: Tvalues,
+                },
+                {
+                  label: "West Temp",
+                  fill: false, // Try with true
+                  backgroundColor: 'rgba( 243, 156, 18 , 1)', // Dot marker color
+                  borderColor: 'rgba( 243, 156, 18 , 1)', // Graph Line Color
+                  data: TFvalues,
+                },
+                {
+                  label: "Humidity",
+                  fill: false, // Try with true
+                  backgroundColor: 'rgba(156, 18, 243 , 1)', // Dot marker color
+                  borderColor: 'rgba(156, 18, 243 , 1)', // Graph Line Color
+                  data: Hvalues,
+                },
+                {
+                  label: "Altitude",
+                  fill: false, // Try with true
+                  backgroundColor: 'rgba(100, 75, 25 , 1)', // Dot marker color
+                  borderColor: 'rgba(100, 75, 25 , 1)', // Graph Line Color
+                  data: Altvalues,
+                },
+                // Add new dataset for NEO-6M data
+                {
+                  label: "NEO Altitude",
+                  fill: false, // Try with true
+                  backgroundColor: 'rgba(255, 0, 0, 1)', // Dot marker color
+                  borderColor: 'rgba(255, 0, 0, 1)', // Graph Line Color
+                  data: NeoAltvalues,
+                },
+                {
+                  label: "Latitude",
+                  fill: false, // Try with true
+                  backgroundColor: 'rgba(0, 255, 0, 1)', // Dot marker color
+                  borderColor: 'rgba(0, 255, 0, 1)', // Graph Line Color
+                  data: LatitudeValues,
+                },
+                {
+                  label: "Longitude",
+                  fill: false, // Try with true
+                  backgroundColor: 'rgba(0, 0, 255, 1)', // Dot marker color
+                  borderColor: 'rgba(0, 0, 255, 1)', // Graph Line Color
+                  data: LongitudeValues,
+                },
+                {
+                  label: "Speed",
+                  fill: false, // Try with true
+                  backgroundColor: 'rgba(255, 255, 0, 1)', // Dot marker color
+                  borderColor: 'rgba(255, 255, 0, 1)', // Graph Line Color
+                  data: SpeedValues,
+                }
+              ],
+            },
+            options: {
+              title: {
+                display: true,
+                text: ""
+              },
+              maintainAspectRatio: false,
+              elements: {
+                line: {
+                  tension: 0.5 // Smoothening (Curved) of data lines
+                }
+              },
+              scales: {
+                yAxes: [{
+                  ticks: {
+                    beginAtZero: true
+                  }
+                }]
+              }
+            }
+          });
+        }
+      }
+
+      setInterval(function () {
+        // Call a function repetitively with 5 Second interval
+        getData();
+      }, 2000); // 2000mSeconds update rate
+
+      // Ajax script to get ADC voltage at every 5 Seconds 
+      // Read This tutorial https://circuits4you.com/2018/02/04/esp8266-ajax-update-part-of-web-page-without-refreshing/
+      var initialDelayStatus = true;
+
+      function getData() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+          if (this.readyState == 4 && this.status == 200) {
+            // Push the data in array
+            var time = new Date().toLocaleTimeString();
+            var txt = this.responseText;
+            var obj = JSON.parse(txt); // Ref: https://www.w3schools.com/js/js_json_parse.asp
+            ADCvalues.push(obj.ADC);
+            Tvalues.push(obj.East_Temp);
+            TFvalues.push(obj.West_Temp);
+            Hvalues.push(obj.Humidity);
+            Altvalues.push(obj.Altitude);
+            // Push NEO-6M data
+            NeoAltvalues.push(obj.NEO_Altitude);
+            LatitudeValues.push(obj.Latitude);
+            LongitudeValues.push(obj.Longitude);
+            SpeedValues.push(obj.Speed);
+            timeStamp.push(time);
+
+            // Update Data Table
+            var table = document.getElementById("dataTable");
+            var row = table.insertRow(1); // Add after headings
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            var cell5 = row.insertCell(4);
+            var cell6 = row.insertCell(5);
+            var cell7 = row.insertCell(6);
+            var cell8 = row.insertCell(7);
+            var cell9 = row.insertCell(8);
+            var cell10 = row.insertCell(9);
+            cell1.innerHTML = time;
+            cell2.innerHTML = obj.ADC;
+            cell3.innerHTML = obj.East_Temp;
+            cell4.innerHTML = obj.West_Temp;
+            cell5.innerHTML = obj.Humidity;
+            cell6.innerHTML = obj.Altitude;
+            // Display NEO-6M data
+            cell7.innerHTML = obj.NEO_Altitude;
+            cell8.innerHTML = obj.Latitude;
+            cell9.innerHTML = obj.Longitude;
+            cell10.innerHTML = obj.Speed;
+
+            if (initialDelayStatus === true) {
+              setTimeout(function () {
+                initialDelayStatus = false;
+              }, 2000);
+            }
+
+            showGraph(); // Update Graphs
+          }
+        };
+        xhttp.open("GET", "readADC", true); // Handle readADC server on ESP8266
+        xhttp.send();
+      }
+    });
+
+  </script>
+</body>
+
+</html>
