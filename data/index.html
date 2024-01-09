@@ -167,13 +167,13 @@
                   data: Altvalues,
                 },
                 // Add new dataset for NEO-6M data
-                {
-                  label: "NEO Altitude",
-                  fill: false, // Try with true
-                  backgroundColor: 'rgba(255, 0, 0, 1)', // Dot marker color
-                  borderColor: 'rgba(255, 0, 0, 1)', // Graph Line Color
-                  data: NeoAltvalues,
-                },
+                // {
+                //   label: "NEO Altitude",
+                //   fill: false, // Try with true
+                //   backgroundColor: 'rgba(255, 0, 0, 1)', // Dot marker color
+                //   borderColor: 'rgba(255, 0, 0, 1)', // Graph Line Color
+                //   data: NeoAltvalues,
+                // },
               ],
             },
             options: {
@@ -250,7 +250,7 @@
             if (initialDelayStatus === true) {
               setTimeout(function () {
                 initialDelayStatus = false;
-              }, 2000);
+              }, 500);
             }
 
             showGraph(); // Update Graphs

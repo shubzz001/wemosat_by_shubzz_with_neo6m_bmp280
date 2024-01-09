@@ -1,50 +1,43 @@
-
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
+#include <SoftwareSerial.h>
 #include <TinyGPS++.h>
 
-
-//NEO-6M GPS Module:
-//VCC: Connect to 5V on ESP8266 (if your NEO-6M works with 3.3V, connect it to 3.3V on ESP8266).
-//GND: Connect to GND on ESP8266.
-//TXD: Connect to RX (Receive) pin on ESP8266 (e.g., GPIO2 or any other digital pin you prefer).
-//RXD: Connect to TX (Transmit) pin on ESP8266 (e.g., GPIO3 or any other digital pin you prefer).
-//BMP280 Sensor:
-//VCC: Connect to 3.3V on ESP8266.
-//GND: Connect to GND on ESP8266.
-//SDA: Connect to SDA (Data) pin on ESP8266 (e.g., GPIO4).
-//SCL: Connect to SCL (Clock) pin on ESP8266 (e.g., GPIO5).
-
+TinyGPSPlus gps;
+SoftwareSerial SerialGPS(D6, D7); // Connect Neo-6M GPS module to GPIO 12 (RX) and GPIO 13 (TX)
+// D6=TXneo    D7=RXneo
 
 AsyncWebServer server(80);
 
-const char* wifi_ssid = "iset5";
-const char* wifi_pass = "iset@1234";
+const char* wifi_ssid = "Spider";
+const char* wifi_pass = "Shubzzz@8788";
 const int my_ip = 141;
 
 Adafruit_BMP280 bmp;
-#define NEO6M_SERIAL Serial1  // Assuming you connect NEO-6M to Serial1 (RX=D7, TX=D8)
-TinyGPSPlus gps;
+//#define NEO6M_SERIAL Serial1  // Assuming you connect NEO-6M to Serial1 (RX=D7, TX=D8)
+
 
 float bmpAlt, bmpTemp, bmpPressure, ref, Alt= 0;
-float neoAlt;
+float neoAlt, Latitude, Longitude, Speed;
+float referenceAltitude = 0.0;
 
 void notFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
 }
 
+
 void handleADC(AsyncWebServerRequest *request) {
-  String data = "{\"BMP_Altitude\":\"" + String(bmpAlt) + "\", \"BMP_Temperature\":\"" + String(bmpTemp) + "\", \"BMP_Pressure\":\"" + String(bmpPressure) + "\", \"NEO_Altitude\":\"" + String(neoAlt) + "\", \"Latitude\":\"" + String(gps.location.lat(), 6) + "\", \"Longitude\":\"" + String(gps.location.lng(), 6) + "\", \"Speed\":\"" + String(gps.speed.kmph()) + "\"}";
+  String data = "{\"BMP_Altitude\":\"" + String(bmpAlt) + "\", \"BMP_Temperature\":\"" + String(bmpTemp) + "\", \"BMP_Pressure\":\"" + String(bmpPressure) + "\", \"NEO_Altitude\":\"" + String(neoAlt) + "\", \"Latitude\":\"" + String(Latitude, 6) + "\", \"Longitude\":\"" + String(Longitude, 6) + "\", \"Speed\":\"" + String(Speed) + "\"}";
 
   request->send(200, "text/plain", data);
 }
 
 void setup() {
   Serial.begin(115200);
-  NEO6M_SERIAL.begin(9600);  // Initialize NEO-6M GPS module
+  SerialGPS.begin(9600);  // Initialize NEO-6M GPS module
 
   WiFi.begin(wifi_ssid, wifi_pass);
   while (WiFi.status() != WL_CONNECTED) {
@@ -73,6 +66,8 @@ void setup() {
   }
 
  ref = bmp.readPressure() / 100;
+
+//    referenceAltitude = gps.altitude.meters();
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(SPIFFS, "/index.html", "text/html");
@@ -103,12 +98,12 @@ void loop() {
   bmpPressure = bmp.readPressure() / 1000.0F;
 
 
-if (gps.location.isValid() && gps.satellites.value() > 0) {
-    neoAlt = gps.altitude.meters();
-    Serial.println("Valid GPS data: " + String(neoAlt));
-} else {
-    Serial.println("Invalid GPS data");
-}
+//if (gps.location.isValid() && gps.satellites.value() > 0) {
+//    neoAlt = gps.altitude.meters();
+//    Serial.println("Valid GPS data: " + String(neoAlt));
+//} else {
+//    Serial.println("Invalid GPS data");
+//}
 
 
   // Read data from NEO-6M
@@ -119,8 +114,28 @@ if (gps.location.isValid() && gps.satellites.value() > 0) {
 //      }
 //    }
 //  }
-   Serial.println("NEO-6M Altitude: " + String(neoAlt));
+
+
+while (SerialGPS.available() > 0)
+    if (gps.encode(SerialGPS.read())) {
+      if (gps.location.isValid()) {
+        Latitude = gps.location.lat();
+        Longitude = gps.location.lng();
+        float neoAlt1 = gps.altitude.meters();
+        Speed = gps.speed.kmph();
+
+
+        neoAlt = neoAlt1 - referenceAltitude;
+
+//        Serial.print("Latitude: ");
+//        Serial.println(LatitudeString);
+//        Serial.print("Longitude: ");
+//        Serial.println(LongitudeString);
+          Serial.print("neoAlt1: ");
+          Serial.println(neoAlt);
+      } 
 
   
   delay(50);
+}
 }
