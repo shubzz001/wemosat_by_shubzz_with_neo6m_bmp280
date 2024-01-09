@@ -202,7 +202,7 @@
       setInterval(function () {
         // Call a function repetitively with 5 Second interval
         getData();
-      }, 2000); // 2000mSeconds update rate
+      }, 500); // 2000mSeconds update rate
 
       // Ajax script to get ADC voltage at every 5 Seconds 
       // Read This tutorial https://circuits4you.com/2018/02/04/esp8266-ajax-update-part-of-web-page-without-refreshing/
@@ -250,7 +250,7 @@
             if (initialDelayStatus === true) {
               setTimeout(function () {
                 initialDelayStatus = false;
-              }, 500);
+              }, 2000);
             }
 
             showGraph(); // Update Graphs
