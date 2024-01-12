@@ -12,8 +12,8 @@ SoftwareSerial SerialGPS(D6, D7); // Connect Neo-6M GPS module to GPIO 12 (RX) a
 
 AsyncWebServer server(80);
 
-const char* wifi_ssid = "Spider";
-const char* wifi_pass = "Shubzzz@8788";
+const char* wifi_ssid = "iset5";
+const char* wifi_pass = "iset@1234";
 const int my_ip = 141;
 
 Adafruit_BMP280 bmp;
@@ -96,6 +96,7 @@ void loop() {
 
   bmpTemp = bmp.readTemperature();
   bmpPressure = bmp.readPressure() / 1000.0F;
+  Serial.println(bmpAlt);
 
 
 //if (gps.location.isValid() && gps.satellites.value() > 0) {
